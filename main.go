@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	"mbs-booking-app/helper"
 )
 
 var conferenceName = "MBS Conference"
@@ -10,7 +10,13 @@ var conferenceName = "MBS Conference"
 const conferenceTickets int = 50
 
 var remainingTickets uint = 50
-var bookings []string
+var bookings = make([]UserData, 0)
+
+type UserData struct {
+	firstName      string
+	lastName       string
+	ticketsOrdered uint
+}
 
 func main() {
 
@@ -20,7 +26,7 @@ func main() {
 		firstName, lastName, email, ticketsOrdered := getUserInputs()
 
 		isValidName, isValidEmail, isValidTicketRequest, isValidTicketInput :=
-			validateUserInput(firstName, email, ticketsOrdered)
+			helper.ValidateUserInput(firstName, email, ticketsOrdered, remainingTickets)
 
 		if isValidName && isValidEmail && isValidTicketRequest && isValidTicketInput {
 			bookTicket(firstName, lastName, ticketsOrdered)
@@ -48,18 +54,9 @@ func displayWelcomeMessages() {
 func getFirstNamesFromBookings() []string {
 	var firstnames []string
 	for _, booking := range bookings {
-		var names = strings.Fields(booking)
-		firstnames = append(firstnames, names[0]+",")
+		firstnames = append(firstnames, booking.firstName)
 	}
 	return firstnames
-}
-
-func validateUserInput(firstName string, email string, ticketsOrdered uint) (bool, bool, bool, bool) {
-	isValidName := len(firstName) >= 2
-	isValidEmail := strings.Contains(email, "@")
-	isValidTicketRequest := ticketsOrdered <= remainingTickets
-	isValidTicketInput := ticketsOrdered > 0
-	return isValidName, isValidEmail, isValidTicketRequest, isValidTicketInput
 }
 
 func getUserInputs() (string, string, string, uint) {
@@ -84,8 +81,14 @@ func getUserInputs() (string, string, string, uint) {
 
 func bookTicket(firstName string, lastName string, ticketsOrdered uint) {
 	remainingTickets = remainingTickets - ticketsOrdered
-	bookings = append(bookings, firstName+" "+lastName)
+	var userData = UserData{
+		firstName:      firstName,
+		lastName:       lastName,
+		ticketsOrdered: ticketsOrdered,
+	}
+	bookings = append(bookings, userData)
 
+	fmt.Printf("List of bookings: %v.\n", bookings)
 	fmt.Printf("Bookings is of type: %T. \n", bookings)
 	fmt.Printf("We currently have %v booking(s). \n", len(bookings))
 
