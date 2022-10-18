@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"mbs-booking-app/helper"
+	"sync"
+	"time"
 )
 
 var conferenceName = "MBS Conference"
@@ -15,34 +17,38 @@ var bookings = make([]UserData, 0)
 type UserData struct {
 	firstName      string
 	lastName       string
+	email          string
 	ticketsOrdered uint
 }
+
+var waitGroup = sync.WaitGroup{}
 
 func main() {
 
 	displayWelcomeMessages()
 
-	for {
-		firstName, lastName, email, ticketsOrdered := getUserInputs()
+	firstName, lastName, email, ticketsOrdered := getUserInputs()
 
-		isValidName, isValidEmail, isValidTicketRequest, isValidTicketInput :=
-			helper.ValidateUserInput(firstName, email, ticketsOrdered, remainingTickets)
+	isValidName, isValidEmail, isValidTicketRequest, isValidTicketInput :=
+		helper.ValidateUserInput(firstName, email, ticketsOrdered, remainingTickets)
 
-		if isValidName && isValidEmail && isValidTicketRequest && isValidTicketInput {
-			bookTicket(firstName, lastName, ticketsOrdered)
-		} else {
-			handleErrors(isValidName, isValidEmail, isValidTicketRequest, isValidTicketInput,
-				firstName, email, ticketsOrdered)
-			continue
-		}
-
-		if remainingTickets == 0 {
-			firstNames := getFirstNamesFromBookings()
-			fmt.Printf("The following people have booked their tickets %v. \n", firstNames)
-			fmt.Printf("***** All tickets are booked, thank you! *****\n")
-			break
-		}
+	if isValidName && isValidEmail && isValidTicketRequest && isValidTicketInput {
+		bookTicket(firstName, lastName, email, ticketsOrdered)
+		waitGroup.Add(1)
+		go emailTicketToUser(firstName, lastName, email, ticketsOrdered)
+	} else {
+		handleErrors(isValidName, isValidEmail, isValidTicketRequest, isValidTicketInput,
+			firstName, email, ticketsOrdered)
+		//continue
 	}
+
+	if remainingTickets == 0 {
+		firstNames := getFirstNamesFromBookings()
+		fmt.Printf("The following people have booked their tickets %v. \n", firstNames)
+		fmt.Printf("***** All tickets are booked, thank you! *****\n")
+		//break
+	}
+	waitGroup.Wait()
 }
 
 func displayWelcomeMessages() {
@@ -79,11 +85,12 @@ func getUserInputs() (string, string, string, uint) {
 	return firstName, lastName, email, ticketsOrdered
 }
 
-func bookTicket(firstName string, lastName string, ticketsOrdered uint) {
+func bookTicket(firstName string, lastName string, email string, ticketsOrdered uint) {
 	remainingTickets = remainingTickets - ticketsOrdered
 	var userData = UserData{
 		firstName:      firstName,
 		lastName:       lastName,
+		email:          email,
 		ticketsOrdered: ticketsOrdered,
 	}
 	bookings = append(bookings, userData)
@@ -94,6 +101,15 @@ func bookTicket(firstName string, lastName string, ticketsOrdered uint) {
 
 	fmt.Printf("Thank you %v for buying %v tickets \n", firstName, ticketsOrdered)
 	fmt.Printf("We have %v tickets left \n", remainingTickets)
+}
+
+func emailTicketToUser(firsName string, lastName string, email string, ticketsOrdered uint) {
+	time.Sleep(10 * time.Second)
+	var ticket = fmt.Sprintf("%v tickets for %v %v", ticketsOrdered, firsName, lastName)
+	fmt.Println("#####################")
+	fmt.Printf("Sending ticket:\n %v \nto email address: %v \n", ticket, email)
+	fmt.Println("#####################")
+	waitGroup.Done()
 }
 
 func handleErrors(isValidName bool, isValidEmail bool, isValidTicketRequest bool, isValidTicketInput bool,
